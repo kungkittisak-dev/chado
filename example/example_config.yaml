@@ -1,0 +1,50 @@
+# Chado Feature Flag Configuration Example
+version: 1.0
+
+# Define patterns to detect feature flag calls
+patterns:
+  # Method call patterns (supports wildcards)
+  methods:
+    - "FeatureFlagService.isEnabled"
+    - "FeatureFlags.check"
+    - "flags.isFeatureEnabled"
+    - "*.isFeatureEnabled"
+
+  # Class patterns for flag services
+  classes:
+    - "FeatureFlagService"
+    - "FeatureFlags"
+
+# Flag definitions with their resolved values
+flags:
+  # Feature that's now fully rolled out (true)
+  new_authentication_ui:
+    value: true
+    remove_definition: true
+    description: "New authentication UI rolled out to 100%"
+    ticket: "FEAT-123"
+
+  # Experimental feature being removed (false)
+  experimental_api:
+    value: false
+    remove_definition: true
+    description: "Experimental API that didn't work out"
+    aliases:
+      - "exp_api"
+      - "new_api_experiment"
+
+  # Another rolled out feature
+  improved_performance:
+    value: true
+    remove_definition: true
+
+  # Legacy support being removed
+  legacy_compatibility_mode:
+    value: false
+    remove_definition: true
+
+# Optional: Global settings
+settings:
+  preserve_comments: true
+  remove_empty_blocks: true
+  format_output: true

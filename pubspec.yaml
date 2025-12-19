@@ -1,0 +1,33 @@
+name: chado
+description: A CLI tool to automatically remove feature flags from Dart code
+version: 1.0.0
+repository: https://github.com/yourusername/chado
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  # Core analyzer for Dart AST
+  analyzer: ^6.0.0
+
+  # CLI argument parsing
+  args: ^2.4.0
+
+  # YAML configuration support
+  yaml: ^3.1.0
+
+  # Code formatting
+  dart_style: ^2.3.0
+
+  # File path handling
+  path: ^1.8.0
+
+  # Logging
+  logging: ^1.2.0
+
+dev_dependencies:
+  test: ^1.24.0
+  lints: ^3.0.0
+
+executables:
+  chado: chado
