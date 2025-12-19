@@ -100,7 +100,11 @@ class ConfigLoader {
   }
 
   /// Validate that the configuration has required fields and valid values.
-  void validate(FlagConfig config) {
+  ///
+  /// Returns a list of warning messages (e.g., for expired flags).
+  List<String> validate(FlagConfig config) {
+    final warnings = <String>[];
+
     if (config.flags.isEmpty) {
       throw ConfigLoaderException('Configuration must contain at least one flag');
     }
@@ -125,7 +129,14 @@ class ConfigLoader {
           }
         }
       }
+
+      // Check for expired flags
+      if (flag.isExpired && flag.expirationWarning != null) {
+        warnings.add(flag.expirationWarning!);
+      }
     }
+
+    return warnings;
   }
 }
 

@@ -25,11 +25,27 @@ class ChadoCommandRunner {
 
       // Load configuration
       ChadoLogger.progress('Loading configuration from ${options.configPath}');
-      final config = await _loadConfig(options.configPath);
+      final configResult = await _loadConfig(options.configPath);
+      final config = configResult.config;
+      final configWarnings = configResult.warnings;
 
       ChadoLogger.info('Loaded ${config.flags.length} flag(s) from configuration');
       for (final entry in config.flags.entries) {
-        ChadoLogger.debug('  ${entry.key}: ${entry.value.value}');
+        final flag = entry.value;
+        final metadata = [
+          if (flag.owner != null) 'owner: ${flag.owner}',
+          if (flag.expire != null) 'expires: ${flag.expire!.toIso8601String().split('T')[0]}',
+        ].join(', ');
+
+        ChadoLogger.debug('  ${entry.key}: ${entry.value.value}${metadata.isNotEmpty ? ' ($metadata)' : ''}');
+      }
+
+      // Show configuration warnings (e.g., expired flags)
+      if (configWarnings.isNotEmpty) {
+        ChadoLogger.warning('\nConfiguration warnings:');
+        for (final warning in configWarnings) {
+          ChadoLogger.warning('  $warning');
+        }
       }
 
       // Find Dart files to process
@@ -75,12 +91,12 @@ class ChadoCommandRunner {
     }
   }
 
-  Future<FlagConfig> _loadConfig(String configPath) async {
+  Future<_ConfigLoadResult> _loadConfig(String configPath) async {
     try {
       final loader = ConfigLoader();
       final config = await loader.load(configPath);
-      loader.validate(config);
-      return config;
+      final warnings = loader.validate(config);
+      return _ConfigLoadResult(config, warnings);
     } catch (e) {
       throw Exception('Failed to load configuration: $e');
     }
@@ -157,4 +173,12 @@ class ChadoCommandRunner {
       ChadoLogger.info('\nNo files needed modification');
     }
   }
+}
+
+/// Result of loading and validating configuration.
+class _ConfigLoadResult {
+  final FlagConfig config;
+  final List<String> warnings;
+
+  _ConfigLoadResult(this.config, this.warnings);
 }

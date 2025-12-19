@@ -23,12 +23,16 @@ flags:
     remove_definition: true
     description: "New authentication UI rolled out to 100%"
     ticket: "FEAT-123"
+    owner: "auth-team"
+    expire: "2024-12-31"
 
   # Experimental feature being removed (false)
   experimental_api:
     value: false
     remove_definition: true
     description: "Experimental API that didn't work out"
+    owner: "platform-team"
+    expire: "2024-06-30"
     aliases:
       - "exp_api"
       - "new_api_experiment"
@@ -37,11 +41,14 @@ flags:
   improved_performance:
     value: true
     remove_definition: true
+    owner: "performance-team"
+    expire: "2025-03-15"
 
   # Legacy support being removed
   legacy_compatibility_mode:
     value: false
     remove_definition: true
+    owner: "legacy-team"
 
 # Optional: Global settings
 settings:

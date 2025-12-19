@@ -1,3 +1,11 @@
+## 1.0.3
+
+- Add `owner` and `expire` fields to flag definitions for better tracking
+- Add expiration warnings for flags past their expire date
+- Enhance debug output to display flag metadata (owner, expiration)
+- Update example configuration with owner and expire fields
+- Update README documentation with new flag metadata options
+
 ## 1.0.2
 
 - Improve version parsing in config to handle different types

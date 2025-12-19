@@ -74,10 +74,15 @@ flags:
     value: true
     remove_definition: true
     description: "Feature rolled out to 100%"
+    owner: "frontend-team"
+    ticket: "FEAT-456"
+    expire: "2025-12-31"
 
   experimental_feature:
     value: false
     remove_definition: true
+    owner: "backend-team"
+    expire: "2025-06-30"
     aliases:
       - "exp_feature"
 
@@ -94,11 +99,13 @@ settings:
 
 #### Flags
 Each flag definition includes:
-- `value`: The resolved boolean value (true/false)
+- `value`: The resolved boolean value (true/false) **[required]**
 - `remove_definition`: Whether to remove the flag definition (default: true)
 - `aliases`: Alternative names for the flag (optional)
 - `description`: Human-readable description (optional)
 - `ticket`: Related ticket/issue number (optional)
+- `owner`: Owner or team responsible for the flag (optional)
+- `expire`: Expiration date in ISO format (YYYY-MM-DD) - triggers warnings if expired (optional)
 
 #### Settings
 - `preserve_comments`: Keep comments in transformed code (default: true)

@@ -77,6 +77,8 @@ class FlagDefinition {
   final List<String> aliases;
   final String? description;
   final String? ticket;
+  final String? owner;
+  final DateTime? expire;
 
   FlagDefinition({
     required this.name,
@@ -85,9 +87,20 @@ class FlagDefinition {
     this.aliases = const [],
     this.description,
     this.ticket,
+    this.owner,
+    this.expire,
   });
 
   factory FlagDefinition.fromMap(String name, Map<String, dynamic> map) {
+    DateTime? expireDate;
+    if (map['expire'] != null) {
+      try {
+        expireDate = DateTime.parse(map['expire'].toString());
+      } catch (e) {
+        // Invalid date format, ignore
+      }
+    }
+
     return FlagDefinition(
       name: name,
       value: map['value'] as bool,
@@ -97,6 +110,8 @@ class FlagDefinition {
           .toList(),
       description: map['description'] as String?,
       ticket: map['ticket'] as String?,
+      owner: map['owner'] as String?,
+      expire: expireDate,
     );
   }
 
@@ -107,12 +122,28 @@ class FlagDefinition {
       if (aliases.isNotEmpty) 'aliases': aliases,
       if (description != null) 'description': description,
       if (ticket != null) 'ticket': ticket,
+      if (owner != null) 'owner': owner,
+      if (expire != null) 'expire': expire!.toIso8601String(),
     };
   }
 
   /// Check if the given flag name matches this definition or any of its aliases.
   bool matches(String flagName) {
     return name == flagName || aliases.contains(flagName);
+  }
+
+  /// Check if the flag has expired.
+  bool get isExpired {
+    if (expire == null) return false;
+    return DateTime.now().isAfter(expire!);
+  }
+
+  /// Get a warning message if the flag is expired.
+  String? get expirationWarning {
+    if (!isExpired) return null;
+
+    final daysExpired = DateTime.now().difference(expire!).inDays;
+    return 'Flag "$name" expired $daysExpired day(s) ago (${expire!.toIso8601String().split('T')[0]})';
   }
 }
 
