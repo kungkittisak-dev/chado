@@ -96,16 +96,14 @@ class DeadCodeEliminator {
         if (decision.shouldPromote && decision.blocksToKeep.isNotEmpty) {
           // Promote the kept block
           final blockToKeep = decision.blocksToKeep.first;
-          final promoted = _rewriter.promoteBlock(
-            source,
-            blockToKeep.node,
-            blockToKeep.parent ?? node,
-          );
+
+          // Extract the content from the block to keep
+          String replacement = _extractBlockContent(source, blockToKeep.node);
 
           transformations.add(_Transformation(
             offset: node.offset,
             length: node.length,
-            replacement: promoted.substring(node.offset, node.offset + node.length),
+            replacement: replacement,
             priority: 1,
           ));
         }
@@ -147,6 +145,27 @@ class DeadCodeEliminator {
     }
 
     return transformations;
+  }
+
+  /// Extract content from a block node, handling both Block and single statements.
+  String _extractBlockContent(String source, AstNode node) {
+    if (node is Block) {
+      // Extract statements from within the braces
+      final statements = node.statements;
+      if (statements.isEmpty) {
+        return '';
+      }
+
+      final firstOffset = statements.first.offset;
+      final lastEnd = statements.last.end;
+      return source.substring(firstOffset, lastEnd);
+    } else if (node is Expression) {
+      // For expressions (like ternary branches), extract the expression
+      return source.substring(node.offset, node.end);
+    } else {
+      // For single statements, extract the statement
+      return source.substring(node.offset, node.end);
+    }
   }
 }
 

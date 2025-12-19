@@ -7,7 +7,7 @@ patterns:
   methods:
     - "FeatureFlagService.isEnabled"
     - "FeatureFlags.check"
-    - "flags.isFeatureEnabled"
+    - "flags.isEnabled"
     - "*.isFeatureEnabled"
 
   # Class patterns for flag services

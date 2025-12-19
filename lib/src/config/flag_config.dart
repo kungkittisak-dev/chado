@@ -14,7 +14,7 @@ class FlagConfig {
 
   factory FlagConfig.fromMap(Map<String, dynamic> map) {
     return FlagConfig(
-      version: map['version'] as String? ?? '1.0',
+      version: map['version']?.toString() ?? '1.0',
       patterns: map['patterns'] != null
           ? PatternConfig.fromMap(map['patterns'] as Map<String, dynamic>)
           : null,

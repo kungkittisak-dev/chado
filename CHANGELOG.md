@@ -1,3 +1,9 @@
+## 1.0.2
+
+- Improve version parsing in config to handle different types
+- Refactor block extraction logic for better code promotion
+- Update example configuration patterns
+
 ## 1.0.1
 
 - Update installation instructions in README for pub.dev
