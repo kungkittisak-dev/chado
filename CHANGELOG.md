@@ -1,3 +1,8 @@
+## 1.0.1
+
+- Update installation instructions in README for pub.dev
+- Documentation improvements
+
 ## 1.0.0
 
 - Initial release of Chado
