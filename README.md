@@ -15,12 +15,11 @@ A Dart CLI tool for automatically removing feature flags from Dart code, inspire
 
 ```bash
 # Install globally
-dart pub global activate --source path .
+dart pub global activate chado
 
-# Or add to pubspec.yaml for local development
+# Or add to pubspec.yaml
 dependencies:
-  chado:
-    path: /path/to/chado
+  chado: ^1.0.0
 ```
 
 ## Usage
