@@ -118,11 +118,6 @@ class FlagUsageVisitor extends RecursiveAstVisitor<void> {
     return null;
   }
 
-  /// Check if this method invocation matches any configured pattern.
-  bool _matchesPattern(MethodInvocation node) {
-    return _matchesPatternWithNode(node) != null;
-  }
-
   /// Check if method invocation matches a single pattern and return the flag node.
   _PatternMatchResult? _matchesSinglePatternWithNode(MethodInvocation node, String pattern) {
     // Pattern: "*.method(nestedMethod" - matches method calls with nested method as first arg
