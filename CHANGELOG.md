@@ -1,3 +1,10 @@
+## 1.1.1
+
+- **FIX**: Resolve offset mismatch causing RangeError when removing variable declarations
+- Cache AST visitor to avoid duplicate traversals
+- Re-analyze transformed source before flag definition removal
+- Add validation for node offsets
+
 ## 1.1.0
 
 - **MAJOR**: Add variable tracking for flags stored in variables (Riverpod pattern support)
