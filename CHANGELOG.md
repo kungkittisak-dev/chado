@@ -1,3 +1,12 @@
+## 1.1.0
+
+- **MAJOR**: Add variable tracking for flags stored in variables (Riverpod pattern support)
+- Support nested pattern matching (e.g., `*.watch(releaseFlagProvider`)
+- Automatically remove variable declarations that hold flag values
+- Handle flag references through variables in control flow
+- Add comprehensive examples for Riverpod patterns
+- Update documentation with variable tracking capabilities
+
 ## 1.0.3
 
 - Add `owner` and `expire` fields to flag definitions for better tracking

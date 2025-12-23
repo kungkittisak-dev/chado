@@ -8,6 +8,12 @@ class FlagUsageVisitor extends RecursiveAstVisitor<void> {
   final FlagConfig config;
   final List<FlagReference> flagReferences = [];
 
+  /// Maps variable names to their flag information (flagName, resolvedValue).
+  final Map<String, FlagVariableInfo> _flagVariables = {};
+
+  /// Get the flag variables map for external access.
+  Map<String, FlagVariableInfo> get flagVariables => _flagVariables;
+
   FlagUsageVisitor(this.config);
 
   @override
@@ -15,11 +21,28 @@ class FlagUsageVisitor extends RecursiveAstVisitor<void> {
     super.visitMethodInvocation(node);
 
     // Check if this method invocation matches any configured pattern
-    if (_matchesPattern(node)) {
-      final flagName = _extractFlagName(node);
+    final matchResult = _matchesPatternWithNode(node);
+    if (matchResult != null) {
+      final flagNode = matchResult.flagNode;
+      final flagName = _extractFlagName(flagNode);
+
       if (flagName != null) {
         final flagDef = _resolveFlagDefinition(flagName);
         if (flagDef != null) {
+          // Check if this is part of a variable declaration
+          final variableDecl = _findParentVariableDeclaration(node);
+          if (variableDecl != null) {
+            // Track this variable as holding a flag value
+            final varName = variableDecl.name.lexeme;
+            _flagVariables[varName] = FlagVariableInfo(
+              flagName: flagName,
+              resolvedValue: flagDef.value,
+              variableNode: variableDecl,
+            );
+            // Don't create a reference here; we'll create it when the variable is used
+            return;
+          }
+
           // Check if this flag call is negated
           final isNegated = _isNegated(node);
 
@@ -42,21 +65,97 @@ class FlagUsageVisitor extends RecursiveAstVisitor<void> {
     }
   }
 
+  @override
+  void visitSimpleIdentifier(SimpleIdentifier node) {
+    super.visitSimpleIdentifier(node);
+
+    // Check if this identifier references a flag variable
+    final varName = node.name;
+    final flagInfo = _flagVariables[varName];
+
+    if (flagInfo != null) {
+      // Check if this identifier is used in a control flow condition
+      final parentControlFlow = _findParentControlFlow(node);
+      if (parentControlFlow != null) {
+        // Check if this identifier is negated
+        final isNegated = _isNegated(node);
+
+        final reference = FlagReference(
+          flagName: flagInfo.flagName,
+          resolvedValue: flagInfo.resolvedValue,
+          node: node,
+          offset: node.offset,
+          length: node.length,
+          parentControlFlow: parentControlFlow,
+          isNegated: isNegated,
+          variableName: varName,
+        );
+
+        flagReferences.add(reference);
+      }
+    }
+  }
+
   /// Check if this method invocation matches any configured pattern.
-  bool _matchesPattern(MethodInvocation node) {
+  /// Returns a PatternMatchResult if matched, null otherwise.
+  _PatternMatchResult? _matchesPatternWithNode(MethodInvocation node) {
     final patterns = config.patterns?.methods ?? [];
     if (patterns.isEmpty) {
       // Default patterns if none configured
-      return _matchesDefaultPattern(node);
+      if (_matchesDefaultPattern(node)) {
+        return _PatternMatchResult(flagNode: node);
+      }
+      return null;
     }
 
     for (final pattern in patterns) {
-      if (_matchesSinglePattern(node, pattern)) {
-        return true;
+      final result = _matchesSinglePatternWithNode(node, pattern);
+      if (result != null) {
+        return result;
       }
     }
 
-    return false;
+    return null;
+  }
+
+  /// Check if this method invocation matches any configured pattern.
+  bool _matchesPattern(MethodInvocation node) {
+    return _matchesPatternWithNode(node) != null;
+  }
+
+  /// Check if method invocation matches a single pattern and return the flag node.
+  _PatternMatchResult? _matchesSinglePatternWithNode(MethodInvocation node, String pattern) {
+    // Pattern: "*.method(nestedMethod" - matches method calls with nested method as first arg
+    // Example: "*.watch(releaseFlagProvider" matches ref.watch(releaseFlagProvider(...))
+    if (pattern.contains('(')) {
+      final openParenIndex = pattern.indexOf('(');
+      final outerPattern = pattern.substring(0, openParenIndex);
+      final nestedMethodName = pattern.substring(openParenIndex + 1);
+
+      // Check if this node matches the outer pattern
+      if (!_matchesSinglePattern(node, outerPattern)) {
+        return null;
+      }
+
+      // Check if the first argument is a method call matching nestedMethodName
+      final args = node.argumentList.arguments;
+      if (args.isEmpty) return null;
+
+      final firstArg = args.first;
+      if (firstArg is MethodInvocation && firstArg.methodName.name == nestedMethodName) {
+        // Return the nested method invocation as the flag node
+        return _PatternMatchResult(flagNode: firstArg);
+      }
+
+      return null;
+    }
+
+    // Standard patterns
+    if (_matchesSinglePattern(node, pattern)) {
+      return _PatternMatchResult(flagNode: node);
+    }
+
+    return null;
   }
 
   /// Check if method invocation matches a single pattern.
@@ -158,7 +257,7 @@ class FlagUsageVisitor extends RecursiveAstVisitor<void> {
   }
 
   /// Check if this flag call is negated (wrapped in ! operator).
-  bool _isNegated(MethodInvocation node) {
+  bool _isNegated(AstNode node) {
     var parent = node.parent;
 
     // Check for prefix expression with ! operator
@@ -211,4 +310,50 @@ class FlagUsageVisitor extends RecursiveAstVisitor<void> {
     return condition.offset <= node.offset &&
         node.end <= condition.end;
   }
+
+  /// Find the parent variable declaration if this node is part of a variable initializer.
+  VariableDeclaration? _findParentVariableDeclaration(AstNode node) {
+    var parent = node.parent;
+
+    while (parent != null) {
+      if (parent is VariableDeclaration) {
+        // Make sure this node is in the initializer
+        if (parent.initializer != null &&
+            parent.initializer!.offset <= node.offset &&
+            node.end <= parent.initializer!.end) {
+          return parent;
+        }
+      }
+
+      // Stop at statement boundaries
+      if (parent is Statement) {
+        break;
+      }
+
+      parent = parent.parent;
+    }
+
+    return null;
+  }
+}
+
+/// Holds information about a variable that stores a feature flag value.
+class FlagVariableInfo {
+  final String flagName;
+  final bool resolvedValue;
+  final VariableDeclaration variableNode;
+
+  FlagVariableInfo({
+    required this.flagName,
+    required this.resolvedValue,
+    required this.variableNode,
+  });
+}
+
+/// Result of pattern matching that includes the node containing the flag name.
+class _PatternMatchResult {
+  /// The method invocation node that contains the flag name (might be nested).
+  final MethodInvocation flagNode;
+
+  _PatternMatchResult({required this.flagNode});
 }

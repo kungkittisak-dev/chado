@@ -5,9 +5,10 @@ A Dart CLI tool for automatically removing feature flags from Dart code, inspire
 ## Features
 
 - 🎯 **Pattern Matching**: Detects feature flag service calls with configurable patterns
+- 🔄 **Variable Tracking**: Tracks flags stored in variables (supports Riverpod patterns)
 - 🧹 **Dead Code Elimination**: Removes unreachable code branches based on flag values
 - 📦 **Import Cleanup**: Automatically removes unused imports
-- 🔧 **Flag Definition Removal**: Removes flag constant definitions
+- 🔧 **Flag Definition Removal**: Removes flag constant definitions and variables
 - 💅 **Code Formatting**: Preserves or applies Dart formatting
 - 🔍 **Dry Run Mode**: Preview changes before applying them
 
@@ -94,7 +95,9 @@ settings:
 ### Configuration Options
 
 #### Patterns
-- `methods`: List of method call patterns to detect (supports wildcards)
+- `methods`: List of method call patterns to detect (supports wildcards and nested patterns)
+  - Simple patterns: `"FeatureFlagService.isEnabled"`, `"*.isEnabled"`
+  - Nested patterns: `"*.watch(releaseFlagProvider"` (matches `ref.watch(releaseFlagProvider(...))`)
 - `classes`: List of class names that provide flag services
 
 #### Flags
@@ -150,7 +153,9 @@ Removes unused imports and flag definitions.
 
 ## Examples
 
-### Before Transformation
+### Example 1: Direct Service Calls
+
+**Before Transformation**
 
 ```dart
 import 'package:app/feature_flags.dart';
@@ -182,7 +187,7 @@ flags:
     remove_definition: true
 ```
 
-### After Transformation
+**After Transformation**
 
 ```dart
 class MyService {
@@ -190,6 +195,56 @@ class MyService {
     useNewImplementation();
 
     final mode = stableMode();
+  }
+}
+```
+
+### Example 2: Riverpod Pattern (Variable Tracking)
+
+**Before Transformation**
+
+```dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+class MyWidget extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isEnabled = ref.watch(
+      releaseFlagProvider('new_ui', defaultValue: false),
+    );
+
+    if (isEnabled) {
+      return NewUI();
+    } else {
+      return OldUI();
+    }
+  }
+}
+```
+
+**Configuration**
+
+```yaml
+patterns:
+  methods:
+    - "*.watch(releaseFlagProvider"
+    - "*.read(releaseFlagProvider"
+
+flags:
+  new_ui:
+    value: true
+    remove_definition: true
+```
+
+**After Transformation**
+
+```dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+class MyWidget extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return NewUI();
   }
 }
 ```
@@ -229,10 +284,25 @@ if (!flags.isEnabled('feature')) {
 }
 ```
 
+### Variable Assignment (Riverpod Pattern)
+
+```dart
+// Flag value stored in variable
+final isEnabled = ref.watch(releaseFlagProvider('feature'));
+
+if (isEnabled) {
+  // Kept if feature=true
+} else {
+  // Kept if feature=false
+}
+// Variable declaration and dead code branch are removed
+```
+
 ## Limitations
 
 - Only supports pure Dart code (no Flutter-specific widgets)
 - Handles simple to moderately complex boolean expressions
+- Variable tracking is scoped to the same file/function
 - Does not trace const values across files
 - Cannot simplify highly complex nested conditions
 

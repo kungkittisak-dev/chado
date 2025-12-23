@@ -8,8 +8,8 @@ class FlagReference {
   /// The resolved boolean value of this flag from the configuration.
   final bool resolvedValue;
 
-  /// The method invocation AST node representing this flag check.
-  final MethodInvocation node;
+  /// The AST node representing this flag check (MethodInvocation or SimpleIdentifier).
+  final AstNode node;
 
   /// The character offset where this flag reference starts in the file.
   final int offset;
@@ -23,6 +23,9 @@ class FlagReference {
   /// Whether this flag reference is negated (e.g., !flag).
   final bool isNegated;
 
+  /// The variable name if this is a variable-based flag reference.
+  final String? variableName;
+
   FlagReference({
     required this.flagName,
     required this.resolvedValue,
@@ -31,6 +34,7 @@ class FlagReference {
     required this.length,
     this.parentControlFlow,
     this.isNegated = false,
+    this.variableName,
   });
 
   /// The effective boolean value considering negation.

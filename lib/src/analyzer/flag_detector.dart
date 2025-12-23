@@ -22,6 +22,26 @@ class FlagDetector {
   /// that should be removed if configured to do so.
   List<FlagDefinitionLocation> detectFlagDefinitions(CompilationUnit unit) {
     final definitions = <FlagDefinitionLocation>[];
+    final visitor = FlagUsageVisitor(config);
+    unit.visitChildren(visitor);
+
+    // Include variable declarations that hold flag values
+    for (final varInfo in visitor.flagVariables.entries) {
+      final varName = varInfo.key;
+      final flagInfo = varInfo.value;
+      final flagDef = config.flags[flagInfo.flagName];
+
+      // Only remove if configured to do so
+      if (flagDef != null && flagDef.removeDefinition) {
+        definitions.add(FlagDefinitionLocation(
+          flagName: varName,
+          node: flagInfo.variableNode.parent?.parent ?? flagInfo.variableNode,
+          offset: flagInfo.variableNode.offset,
+          length: flagInfo.variableNode.length,
+          type: FlagDefinitionType.variable,
+        ));
+      }
+    }
 
     // Find top-level constants
     for (final declaration in unit.declarations) {

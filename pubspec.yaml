@@ -1,6 +1,6 @@
 name: chado
 description: A CLI tool to automatically remove feature flags from Dart code
-version: 1.0.3
+version: 1.1.0
 repository: https://github.com/kungkittisak-dev/chado
 
 environment:

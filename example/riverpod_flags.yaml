@@ -1,0 +1,29 @@
+version: 1.0
+
+# Define patterns to detect feature flags
+patterns:
+  methods:
+    # Riverpod patterns - match watch/read calls with provider as argument
+    - "*.watch(releaseFlagProvider"
+    - "*.read(releaseFlagProvider"
+    # Standard patterns
+    - "FeatureFlagService.isEnabled"
+
+# Flag definitions with resolved values
+flags:
+  test_feature:
+    value: true
+    remove_definition: true
+    description: "Test feature rolled out"
+    owner: "test-team"
+
+  new_ui:
+    value: false
+    remove_definition: true
+    description: "New UI disabled"
+    owner: "ui-team"
+
+settings:
+  preserve_comments: true
+  remove_empty_blocks: true
+  format_output: true
