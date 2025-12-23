@@ -6,13 +6,25 @@ import '../visitor/flag_usage_visitor.dart';
 /// Detects feature flag usages in AST.
 class FlagDetector {
   final FlagConfig config;
+  FlagUsageVisitor? _cachedVisitor;
+  CompilationUnit? _cachedUnit;
 
   FlagDetector(this.config);
 
+  /// Get or create the visitor for a compilation unit.
+  /// This ensures we only visit the AST once and reuse the results.
+  FlagUsageVisitor _getVisitor(CompilationUnit unit) {
+    if (_cachedUnit != unit || _cachedVisitor == null) {
+      _cachedVisitor = FlagUsageVisitor(config);
+      unit.visitChildren(_cachedVisitor!);
+      _cachedUnit = unit;
+    }
+    return _cachedVisitor!;
+  }
+
   /// Detect all feature flag references in a compilation unit.
   List<FlagReference> detectFlags(CompilationUnit unit) {
-    final visitor = FlagUsageVisitor(config);
-    unit.visitChildren(visitor);
+    final visitor = _getVisitor(unit);
     return visitor.flagReferences;
   }
 
@@ -22,8 +34,7 @@ class FlagDetector {
   /// that should be removed if configured to do so.
   List<FlagDefinitionLocation> detectFlagDefinitions(CompilationUnit unit) {
     final definitions = <FlagDefinitionLocation>[];
-    final visitor = FlagUsageVisitor(config);
-    unit.visitChildren(visitor);
+    final visitor = _getVisitor(unit);
 
     // Include variable declarations that hold flag values
     for (final varInfo in visitor.flagVariables.entries) {
@@ -33,13 +44,24 @@ class FlagDetector {
 
       // Only remove if configured to do so
       if (flagDef != null && flagDef.removeDefinition) {
-        definitions.add(FlagDefinitionLocation(
-          flagName: varName,
-          node: flagInfo.variableNode.parent?.parent ?? flagInfo.variableNode,
-          offset: flagInfo.variableNode.offset,
-          length: flagInfo.variableNode.length,
-          type: FlagDefinitionType.variable,
-        ));
+        // Find the complete statement to remove (VariableDeclarationStatement)
+        // variableNode.parent is VariableDeclarationList
+        // variableNode.parent.parent is VariableDeclarationStatement
+        final statementNode = flagInfo.variableNode.parent?.parent ??
+                              flagInfo.variableNode.parent ??
+                              flagInfo.variableNode;
+
+        // Validate that the offset and length are within bounds
+        // This prevents errors if the AST nodes have invalid ranges
+        if (statementNode.offset >= 0 && statementNode.length > 0) {
+          definitions.add(FlagDefinitionLocation(
+            flagName: varName,
+            node: statementNode,
+            offset: statementNode.offset,
+            length: statementNode.length,
+            type: FlagDefinitionType.variable,
+          ));
+        }
       }
     }
 

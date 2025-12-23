@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:dart_style/dart_style.dart';
 import '../config/flag_config.dart';
 import '../analyzer/dart_file_analyzer.dart';
@@ -64,15 +65,35 @@ class CodeTransformer {
       }
 
       // Step 2: Remove flag definitions
+      // IMPORTANT: Re-parse the transformed source to get fresh AST with correct offsets
       if (analysis.hasFlagDefinitions) {
-        transformedSource = _flagDefinitionRemover.removeDefinitions(
-          transformedSource,
-          analysis.flagDefinitions,
-        );
+        try {
+          final parseResult = parseString(content: transformedSource, throwIfDiagnostics: false);
 
-        removedFlagNames.addAll(
-          analysis.flagDefinitions.map((def) => def.flagName),
-        );
+          if (parseResult.errors.isEmpty) {
+            final reAnalyzer = DartFileAnalyzer(config);
+            final tempFile = File('${file.path}.tmp');
+            await tempFile.writeAsString(transformedSource);
+
+            final reAnalysis = await reAnalyzer.analyze(tempFile);
+            await tempFile.delete();
+
+            if (!reAnalysis.hasErrors && reAnalysis.hasFlagDefinitions) {
+              transformedSource = _flagDefinitionRemover.removeDefinitions(
+                transformedSource,
+                reAnalysis.flagDefinitions,
+              );
+
+              removedFlagNames.addAll(
+                reAnalysis.flagDefinitions.map((def) => def.flagName),
+              );
+            }
+          } else {
+            warnings.add('Skipped flag definition removal - transformed code has parse errors');
+          }
+        } catch (e) {
+          warnings.add('Skipped flag definition removal: $e');
+        }
       }
 
       // Step 3: Clean up unused imports
